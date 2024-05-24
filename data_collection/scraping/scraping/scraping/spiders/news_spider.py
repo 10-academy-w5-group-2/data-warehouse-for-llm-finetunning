@@ -30,21 +30,23 @@ class AmharicNewsSpider(scrapy.Spider):
 
     def parse(self, response):
         # Use Scrapy selector to find all paragraph elements
-        paragraphs = response.css('p::text').getall()
+        paragraphs = response.css('p::text').getall()[0]
         title = response.css('title::text').getall()[0]  # Get the first title element
         header = response.css('h1::text').getall()[0]  # Get the first h1 element
-
+        categories = response.css('li.bbc-1g3396x a::text').getall()
+        categories_str = ', '.join(categories)
         # Prepare the data to be inserted
         data_to_insert = {
             'title': title,
             'header': header,
-            'p_tags': ', '.join(paragraphs)
+            'content': ''.join(paragraphs),
+            'categories': categories_str
         }
 
         # Insert the data into the database
         self.cur.execute("""
-            INSERT INTO html_content (title, header, p_tags)
-            VALUES (%(title)s, %(header)s, %(p_tags)s)
+            INSERT INTO raw_amharic_data (title, header, content, categories)
+            VALUES (%(title)s, %(header)s, %(content)s, %(categories)s)
         """, data_to_insert)
 
         # Commit the transaction
