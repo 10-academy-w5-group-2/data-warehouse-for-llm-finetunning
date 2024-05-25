@@ -12,7 +12,6 @@ class NewsSpider(scrapy.Spider):
     name = "news_spider"
     start_urls = [
         'https://www.capitalethiopia.com',
-        'https://www.waltainfo.com',
         'https://ethiopianmonitor.com',
         'https://www.ethiopianreporter.com',
         'https://ethsat.com',

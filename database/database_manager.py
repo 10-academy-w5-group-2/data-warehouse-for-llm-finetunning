@@ -24,6 +24,14 @@ class DatabaseManager:
         )
         self.connection.autocommit = True
 
+    async def insert_raw_text_data(self, content, source_id, date_collected):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO raw_text_data (content, source_id, date_collected) VALUES (%s, %s, %s) RETURNING id;",
+                (content, source_id, date_collected)
+            )
+            return cursor.fetchone()[0]
+
     async def insert_language(self, language_name):
         with self.connection.cursor() as cursor:
             try:
@@ -44,14 +52,6 @@ class DatabaseManager:
             cursor.execute(
                 "INSERT INTO sources (source_name, source_type, language_id) VALUES (%s, %s, %s) RETURNING id;",
                 (source_name, source_type, language_id)
-            )
-            return cursor.fetchone()[0]
-
-    async def insert_raw_text_data(self, content, source_id, date_collected):
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO raw_text_data (content, source_id, date_collected) VALUES (%s, %s, %s) RETURNING id;",
-                (content, source_id, date_collected)
             )
             return cursor.fetchone()[0]
 
