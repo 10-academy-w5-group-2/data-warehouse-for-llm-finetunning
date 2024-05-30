@@ -1,4 +1,0 @@
-scrapy
-beautifulsoup4
-selenium
-telethon

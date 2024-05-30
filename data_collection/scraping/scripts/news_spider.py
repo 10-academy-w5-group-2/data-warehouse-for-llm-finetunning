@@ -3,13 +3,14 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 # Load environment variables from .env file, if present
 load_dotenv()
 
 class AmharicNewsSpider(scrapy.Spider):
     name = "amharic_news"
-    start_urls = ['https://www.bbc.com/amharic/articles/cg33ge4l23vo']
+    start_urls = ['https://www.bbc.com/amharic/']
 
     def __init__(self):
         super().__init__()
@@ -29,24 +30,41 @@ class AmharicNewsSpider(scrapy.Spider):
         self.conn.close()
 
     def parse(self, response):
+        # Extract all article links from the page
+        article_links = response.css('a[href*="/amharic/articles/"]::attr(href)').getall()
+        
+        for link in article_links:
+            # Ensure the link is an absolute URL
+            if not link.startswith('http'):
+                link = response.urljoin(link)
+            yield scrapy.Request(url=link, callback=self.parse_article)
+
+    def parse_article(self, response):
         # Use Scrapy selector to find all paragraph elements
         paragraphs = response.css('p::text').getall()[0]
-        title = response.css('title::text').getall()[0]  # Get the first title element
-        header = response.css('h1::text').getall()[0]  # Get the first h1 element
+        title = response.css('title::text').get()  # Get the first title element
+        header = response.css('h1::text').get()  # Get the first h1 element
         categories = response.css('li.bbc-1g3396x a::text').getall()
         categories_str = ', '.join(categories)
+        date_tag = response.css('time.bbc-fqsgh5::attr(datetime)').get()
+        if date_tag:
+            date_posted = datetime.strptime(date_tag, '%Y-%m-%d').date()  # Convert to date object
+        else:
+            date_posted = None
         # Prepare the data to be inserted
         data_to_insert = {
             'title': title,
             'header': header,
             'content': ''.join(paragraphs),
-            'categories': categories_str
+            'categories': categories_str,
+            'date':date_posted,
+            'url': response.url,  
         }
 
         # Insert the data into the database
         self.cur.execute("""
-            INSERT INTO raw_amharic_data (title, header, content, categories)
-            VALUES (%(title)s, %(header)s, %(content)s, %(categories)s)
+            INSERT INTO raw_amharic_data (title, header, content, categories, date_posted, url)
+            VALUES (%(title)s, %(header)s, %(content)s, %(categories)s, %(date)s, %(url)s)
         """, data_to_insert)
 
         # Commit the transaction
